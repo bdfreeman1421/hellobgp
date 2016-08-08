@@ -1,0 +1,35 @@
+module hellobgp-impl {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:hellobgp:impl";
+    prefix "hellobgp-impl";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix md-sal-binding; revision-date 2013-10-28;}
+
+    description
+        "Service definition for hellobgp project";
+
+    revision "2014-12-10" {
+        description
+            "Initial revision";
+    }
+
+    identity hellobgp {
+        base config:module-type;
+        config:java-name-prefix Hellobgp;
+    }
+
+    augment "/config:modules/config:module/config:configuration" {
+        case hellobgp {
+            when "/config:modules/config:module/config:type = 'hellobgp'";
+            container broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity md-sal-binding:binding-broker-osgi-registry;
+                    }
+                }
+            }
+        }
+    }
+}

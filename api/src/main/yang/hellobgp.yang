@@ -1,0 +1,32 @@
+module hellobgp {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:hellobgp";
+    prefix "hellobgp";
+
+    revision "2016-08-06" {
+        description "Initial revision of hellobgp model";
+    }
+   
+   container hello-routes {
+      list hello-route {
+      key route-name ;
+        leaf route-name {
+            type string ;
+        }
+      }
+   }
+
+   rpc hello-bgp {
+        input {
+            leaf name {
+                type string;
+            }
+        }
+        output {
+            leaf greating {
+                type string;
+            }
+        }
+    }
+
+}
