@@ -180,6 +180,9 @@ public class HelloBgpListener implements DataTreeChangeListener<LocRib>, AutoClo
             final DataObjectModification<LocRib> mod = change.getRootNode(); 
 	    LOG.info("HelloBgpDataChangeKey:" + key.toString());
 	    LOG.info("HelloBgpDataChange:" + mod.getModificationType());
+
+	    LOG.info("HelloBgpDataChangeBefore:" + mod.getDataBefore());
+	    LOG.info("HelloBgpDataChangeAfter:" + mod.getDataAfter());
         }
 
         /*
@@ -211,6 +214,9 @@ public class HelloBgpListener implements DataTreeChangeListener<LocRib>, AutoClo
         */ 
 
     } 
+
+
+
 
     private InstanceIdentifier<LocRib> getWildcardPath() { 
         InstanceIdentifier<LocRib> path = InstanceIdentifier 
