@@ -7,27 +7,33 @@
  */
 package com.att.demo.hellobgp.impl;
 
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
+
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.ProviderContext;
+import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.RpcRegistration;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
+
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.hellobgp.rev160806.HellobgpService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.RpcRegistration;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.hellobgp.rev160806.HellobgpService;
 
 
 public class HellobgpProvider implements BindingAwareProvider, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(HellobgpProvider.class);
     private RpcRegistration<HellobgpService> helloBgpService; 
+    private HelloBgpListener listener;
+
+
 
     @Override
     public void onSessionInitiated(ProviderContext session) {
         LOG.info("HellobgpProvider Session Initiated");
        // instantiate the DataBroker
         DataBroker db = session.getSALService(DataBroker.class);
-
+        listener = new HelloBgpListener(db);
         helloBgpService = session.addRpcImplementation(HellobgpService.class, new HelloBgpImpl(db));
 
     }

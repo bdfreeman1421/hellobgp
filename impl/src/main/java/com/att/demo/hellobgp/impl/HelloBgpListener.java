@@ -19,9 +19,14 @@ import java.util.concurrent.Future;
 
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
+import org.opendaylight.controller.md.sal.binding.api.DataObjectModification.ModificationType;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
+
+
+
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker.DataChangeScope;
@@ -98,7 +103,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.network.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology; 
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology; 
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey; 
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 
 
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
@@ -122,72 +126,98 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class HelloBgpImpl implements HellobgpService {
 
-       private final Logger log = LoggerFactory.getLogger(HelloBgpImpl.class);
+/**
+ * Instantiated for LocRib and table, listens on a particular LocRib ,
+ * performs transcoding to BA form (message) and does stuff .
+ */
+public class HelloBgpListener implements DataTreeChangeListener<LocRib>, AutoCloseable {
 
-       private DataBroker db;
+    private static final Logger LOG = LoggerFactory.getLogger(HelloBgpListener.class);
 
-       private final String appName = "hellobgpimpl";
+ 
+    private ListenerRegistration<HelloBgpListener> registration; 
+    private DataBroker db; 
+ 
+    public HelloBgpListener(DataBroker db) { 
+        LOG.info("Registering HelloBgpListener"); 
+        this.db = db; 
+        registerListener(db); 
+        LOG.info("Finished Registering HelloBgpListener"); 
+    } 
+ 
+    private void registerListener(final DataBroker db) { 
+        final DataTreeIdentifier<LocRib> treeId = 
+                        new DataTreeIdentifier<LocRib>(LogicalDatastoreType.OPERATIONAL, getWildcardPath()); 
+//                        new DataTreeIdentifier<LocRib>(LogicalDatastoreType.CONFIGURATION, getWildcardPath()); 
+        try { 
+            LOG.info("HelloBgpListener Registering on path: {}", treeId.toString()); 
+            registration = db.registerDataTreeChangeListener(treeId, HelloBgpListener.this); 
+        } catch (final Exception e) { 
+            LOG.warn("HelloBgpListener registration failed"); 
+            //TODO: Should we throw an exception here? 
+        } 
+    } 
+ 
+    @Override 
+    public void close() throws Exception { 
+        if(registration != null) { 
+            LOG.info("HelloBgpListener registraion closing"); 
+            registration.close(); 
+        } 
+    } 
+ 
+    @Override 
+    public void onDataTreeChanged(Collection<DataTreeModification<LocRib>> changes) { 
+        LOG.info("HelloBgp onDataTreeChanged: {}", changes); 
+ 
+        /* TODO:
+         * Currently only handling changes to Global. 
+         * Rest will be added later. 
+         */ 
+        for (DataTreeModification<LocRib> change : changes) { 
+            final InstanceIdentifier<LocRib> key = change.getRootPath().getRootIdentifier(); 
+            final DataObjectModification<LocRib> mod = change.getRootNode(); 
+	    LOG.info("HelloBgpDataChangeKey:" + key.toString());
+	    LOG.info("HelloBgpDataChange:" + mod.getModificationType());
+        }
 
-       //protected static final RibReference LOC_RIB_REF = new DefaultRibReference(InstanceIdentifier.create(BgpRib.class).child(Rib.class, new RibKey(Preconditions.checkNotNull(new RibId("example-bgp-rib")))));
+        /*
+        for (DataTreeModification<LocRib> change : changes) { 
+            final InstanceIdentifier<LocRib> key = change.getRootPath().getRootIdentifier(); 
+            final DataObjectModification<LocRib> mod = change.getRootLocRib(); 
+                switch (mod.getModificationType()) { 
+                case DELETE: 
+                    LOG.trace("Data deleted: {}", mod.getDataBefore()); 
+                    //disconnect(mod); 
+                    break; 
+                case SUBTREE_MODIFIED: 
+                    LOG.trace("Data modified: {} to {}", mod.getDataBefore(),mod.getDataAfter()); 
+                    updateConnections(mod); 
+                    break; 
+                case WRITE: 
+                    if (mod.getDataBefore() == null) { 
+                        LOG.trace("Data added: {}", mod.getDataAfter()); 
+                        connect(mod.getDataAfter()); 
+                    } else { 
+                        LOG.trace("Data modified: {} to {}", mod.getDataBefore(),mod.getDataAfter()); 
+                        updateConnections(mod); 
+                    } 
+                    break; 
+                default: 
+                    throw new IllegalArgumentException("Unhandled modification type " + mod.getModificationType()); 
+                } 
+        } 
+        */ 
 
+    } 
 
-    public HelloBgpImpl(DataBroker db) {
-            this.db = db;
-    }
+    private InstanceIdentifier<LocRib> getWildcardPath() { 
+        InstanceIdentifier<LocRib> path = InstanceIdentifier 
+                        .create(BgpRib.class) 
+                        .child(Rib.class, new RibKey(new RibId("example-bgp-rib"))).child(LocRib.class); 
+        return path; 
+    } 
 
-
-    @Override
-    public Future<RpcResult<HelloBgpOutput>> helloBgp(HelloBgpInput input) {
-        HelloBgpOutputBuilder hellobgpBuilder = new HelloBgpOutputBuilder();
-        hellobgpBuilder.setGreating("Hello " + input.getName());
-
-
-
-
-        // do bgp
-        final Ipv4RouteBuilder ipv4RouteBuilder = new Ipv4RouteBuilder();
-        ipv4RouteBuilder.setPrefix(new Ipv4Prefix("200.20.160.41/32"));
-        //ipv4RouteBuilder.setKey(new Ipv4RouteKey(ipv4RouteBuilder.getPrefix()));
-        Long pathId= 0L;
-        //ipv4RouteBuilder.setKey(new Ipv4RouteKey(new PathId(pathId++),ipv4RouteBuilder.getPrefix()));
-        ipv4RouteBuilder.setKey(new Ipv4RouteKey(ipv4RouteBuilder.getPrefix()));
-        final AttributesBuilder attributesBuilder = new AttributesBuilder();
-        attributesBuilder.setCNextHop(new Ipv4NextHopCaseBuilder().setIpv4NextHop(
-            new Ipv4NextHopBuilder().setGlobal(new Ipv4Address("199.20.160.41")).build()).build());
-        attributesBuilder.setMultiExitDisc(new MultiExitDiscBuilder().setMed(0L).build());
-        attributesBuilder.setLocalPref(new LocalPrefBuilder().setPref(100L).build());
-        attributesBuilder.setOriginatorId(new OriginatorIdBuilder().setOriginator(new Ipv4Address("41.41.41.41")).build());
-        attributesBuilder.setOrigin(new OriginBuilder().setValue(BgpOrigin.Egp).build());
-        attributesBuilder.setClusterId(new ClusterIdBuilder().setCluster(Collections.singletonList(new ClusterIdentifier("40.40.40.40"))).build());
-        attributesBuilder.setAggregator(new AggregatorBuilder().setAsNumber(new AsNumber(64495L)).setNetworkAddress(new Ipv4Address("200.20.160.41")).build());
-        attributesBuilder.setAigp(new AigpBuilder().setAigpTlv(new AigpTlvBuilder().setMetric(new AccumulatedIgpMetric(BigInteger.valueOf(120L))).build()).build());
-        attributesBuilder.setCommunities(Lists.newArrayList(new CommunitiesBuilder(CommunityUtil.NO_ADVERTISE).build()));
-        attributesBuilder.setExtendedCommunities(Lists.newArrayList(
-            //new ExtendedCommunitiesBuilder().setTransitive(true).setExtendedCommunity(
-            new ExtendedCommunitiesBuilder().setExtendedCommunity(
-               new RouteTargetExtendedCommunityCaseBuilder().setRouteTargetExtendedCommunity(
-                    new RouteTargetExtendedCommunityBuilder()
-                        .setGlobalAdministrator(new ShortAsNumber(65020L))
-                        .setLocalAdministrator(Ints.toByteArray(1234)).build()).build()).build()));
-        ipv4RouteBuilder.setAttributes(attributesBuilder.build());
-
-        final InstanceIdentifier TABLES_IID = KeyedInstanceIdentifier
-                .builder(ApplicationRib.class, new ApplicationRibKey(new ApplicationRibId("example-app-rib")))
-                .child(Tables.class, new TablesKey(Ipv4AddressFamily.class, UnicastSubsequentAddressFamily.class))
-                .build();
-
-        final InstanceIdentifier<Ipv4Routes> routesIId = TABLES_IID.child(Ipv4Routes.class);
-
-        final WriteTransaction wTx = db.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.CONFIGURATION, routesIId.child(Ipv4Route.class, ipv4RouteBuilder.getKey()), ipv4RouteBuilder.build());
-        wTx.submit();
-
-        return RpcResultBuilder.success(hellobgpBuilder.build()).buildFuture();
-    }
-
-
-    
 }
 

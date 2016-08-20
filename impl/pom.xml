@@ -71,6 +71,11 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
             <artifactId>util</artifactId>
             <version>${bgp-version}</version>
         </dependency>
+       <dependency>
+            <groupId>org.opendaylight.bgpcep</groupId>
+            <artifactId>topology-api</artifactId>
+            <version>${bgp-version}</version>
+        </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-buffer</artifactId>
